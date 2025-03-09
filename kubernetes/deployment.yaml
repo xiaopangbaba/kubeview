@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubeview
+  labels:
+    app: kubeview
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubeview
+  template:
+    metadata:
+      labels:
+        app: kubeview
+    spec:
+      serviceAccountName: kubeview-sa
+      containers:
+      - name: kubeview
+        image: ${YOUR_REGISTRY}/kubeview:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubeview
+spec:
+  selector:
+    app: kubeview
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubeview-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeview-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "nodes", "namespaces", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses", "persistentvolumes", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeview-role-binding
+subjects:
+- kind: ServiceAccount
+  name: kubeview-sa
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: kubeview-role
+  apiGroup: rbac.authorization.k8s.io
+
